@@ -269,7 +269,7 @@ def main():
         if episode % 5 == 0:
             while time.time() - last_print < time_delay:
                 time.sleep(0.01)
-            print(f'\nStarting episode {episode+1}, curent policy:')
+            print(f'\nStarting episode {episode+1}, current policy:')
             print_policy(q_to_policy(q))
             time.sleep(time_delay)
             last_print = time.time()
