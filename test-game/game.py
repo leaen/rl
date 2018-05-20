@@ -1,8 +1,6 @@
 import random
 import math
 import sys
-import time
-import os
 
 board_width = 4
 board_height = 3
