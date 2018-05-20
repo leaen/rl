@@ -1,6 +1,9 @@
 import random
 import math
 import sys
+import time
+
+from colors import bcolors
 
 board_width = 4
 board_height = 3
@@ -27,6 +30,7 @@ gamma = 0.75
 time_horizon = 50
 rounds = 15
 neg_inf = -math.inf
+time_delay = 0.05
 
 def read_board(fname):
     b_text = [s.strip() for s in open(fname).read().strip().split('\n')][::-1]
@@ -159,9 +163,11 @@ def q_step(q, s):
 
 def q_episode(q):
     s = get_starting_state()
+    steps = 0
 
-    while s not in terminal_states:
+    while steps < time_horizon and s not in terminal_states:
         q, s = q_step(q, s)
+        steps += 1
 
     return q
 
@@ -211,12 +217,12 @@ def print_policy(policy, cur_x = -1, cur_y = -1):
     for terminal_s in terminal_states:
         x, y = terminal_s
         if terminal_states[terminal_s] > 0:
-            table[y][x] = '$'
+            table[y][x] = bcolors.OKGREEN + bcolors.UNDERLINE + '$' + bcolors.ENDC
         else:
-            table[y][x] = 'x'
+            table[y][x] = bcolors.FAIL + bcolors.UNDERLINE + 'x' + bcolors.ENDC
 
     for x, y in starting_states:
-        table[y][x] = 's'
+        table[y][x] = bcolors.OKBLUE + bcolors.BOLD + 's' + bcolors.ENDC
 
     if cur_x >= 0 and cur_y >= 0:
         table[cur_y][cur_x] = 'X'
@@ -256,9 +262,16 @@ def main():
 
     q = get_random_q()
 
+    last_print = 0
+
     for episode in range(rounds):
-        print(f'\nStarting episode {episode+1}, curent policy:')
-        print_policy(q_to_policy(q))
+        if episode % 5 == 0:
+            while time.time() - last_print < time_delay:
+                time.sleep(0.01)
+            print(f'\nStarting episode {episode+1}, curent policy:')
+            print_policy(q_to_policy(q))
+            time.sleep(time_delay)
+            last_print = time.time()
 
         q = q_episode(q)
 
