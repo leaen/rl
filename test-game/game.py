@@ -1,6 +1,11 @@
 import random
 import math
+import sys
+import time
+import os
 
+board_width = 4
+board_height = 3
 
 # Each tuple in blocked_states represents an unenterable state that
 #   the player will 'bounce back' against
@@ -11,6 +16,7 @@ blocked_states = [(0, 1),
 # Each tuple in the pdf represents the probability of a starting state
 #   and the state itself
 starting_state_pdf = [(1, (0,0))]
+starting_states = [(0,0)]
 
 # Each tuple in the terminal_states list represents a terminal state
 #   and its corresponding reward
@@ -24,9 +30,36 @@ time_horizon = 50
 rounds = 15
 neg_inf = -math.inf
 
+def read_board(fname):
+    b_text = [s.strip() for s in open(fname).read().strip().split('\n')][::-1]
+
+    global blocked_states, starting_state_pdf, terminal_states
+    global board_width, board_height, starting_states
+
+    board_width = len(b_text[0])
+    board_height = len(b_text)
+
+    blocked_states = []
+    terminal_states = {}
+    starting_states = []
+    starting_state_pdf = []
+    for y in range(board_height):
+        for x in range(board_width):
+            if b_text[y][x] == '#':
+                blocked_states.append((x,y))
+            elif b_text[y][x] == '$':
+                terminal_states[(x, y)] = 1
+            elif b_text[y][x] == 'x':
+                terminal_states[(x, y)] = -1
+            elif b_text[y][x] == 's':
+                starting_states.append((x, y))
+
+    for s in starting_states:
+        starting_state_pdf.append((1/len(starting_states), s))
+
 def get_states():
-    for x in range(4):
-        for y in range(3):
+    for x in range(board_width):
+        for y in range(board_height):
             yield (x, y)
 
 def get_starting_state():
@@ -167,8 +200,8 @@ def td_lambda(policy, values, lam=0.7):
 
     return new_values
 
-def print_policy(policy):
-    table = [[policy[(x, y)] for x in range(4)] for y in range(3)]
+def print_policy(policy, cur_x = -1, cur_y = -1):
+    table = [[policy[(x, y)] for x in range(board_width)] for y in range(board_height)]
 
     # Replace blocked states with an empty cell
     for blocked_s in blocked_states:
@@ -183,6 +216,12 @@ def print_policy(policy):
             table[y][x] = '$'
         else:
             table[y][x] = 'x'
+
+    for x, y in starting_states:
+        table[y][x] = 's'
+
+    if cur_x >= 0 and cur_y >= 0:
+        table[cur_y][cur_x] = 'X'
 
     table = table[::-1]
 
@@ -214,9 +253,10 @@ def choose_policy(policy, values):
     return new_policy
 
 def main():
-    q = get_random_q()
+    if len(sys.argv) == 2:
+        read_board(sys.argv[1])
 
-    print(q)
+    q = get_random_q()
 
     for episode in range(rounds):
         print(f'\nStarting episode {episode+1}, curent policy:')
