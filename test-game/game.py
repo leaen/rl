@@ -78,7 +78,7 @@ def get_reward(s):
     return default_r
 
 def move_up(s):
-    proposed_s = (s[0], min(s[1]+1, 2))
+    proposed_s = (s[0], min(s[1]+1, board_height-1))
     next_s = proposed_s if proposed_s not in blocked_states else s
     r = get_reward(next_s)
     return (next_s, r)
@@ -96,7 +96,7 @@ def move_left(s):
     return (next_s, r)
 
 def move_right(s):
-    proposed_s = (min(s[0]+1, 3), s[1])
+    proposed_s = (min(s[0]+1, board_width-1), s[1])
     next_s = proposed_s if proposed_s not in blocked_states else s
     r = get_reward(next_s)
     return (next_s, r)
