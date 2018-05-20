@@ -1,4 +1,5 @@
 import random
+import math
 
 
 # Each tuple in blocked_states represents an unenterable state that
@@ -20,7 +21,7 @@ default_r = -0.04
 gamma = 0.75
 time_horizon = 50
 rounds = 50
-neg_inf = -9999999999999999999999999
+neg_inf = -math.inf
 
 def get_states():
     for x in range(4):
