@@ -24,11 +24,12 @@ starting_states = [(0,0)]
 terminal_states = {(0, 2): 1}
 
 # Other parameters and constants
-default_r = -0.04
-lr = 1
-gamma = 0.75
-time_horizon = 50
-rounds = 15
+default_r = -0.01
+win_reward = 1000
+lr = 0.3
+gamma = 1
+time_horizon = 1000
+rounds = 100000
 neg_inf = -math.inf
 time_delay = 0.05
 
@@ -50,9 +51,9 @@ def read_board(fname):
             if b_text[y][x] == '#':
                 blocked_states.append((x,y))
             elif b_text[y][x] == '$':
-                terminal_states[(x, y)] = 1
+                terminal_states[(x, y)] = win_reward
             elif b_text[y][x] == 'x':
-                terminal_states[(x, y)] = -1
+                terminal_states[(x, y)] = -win_reward
             elif b_text[y][x] == 's':
                 starting_states.append((x, y))
 
