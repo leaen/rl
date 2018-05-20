@@ -18,9 +18,10 @@ terminal_states = {(0, 2): 1}
 
 # Other parameters and constants
 default_r = -0.04
+lr = 1
 gamma = 0.75
 time_horizon = 50
-rounds = 50
+rounds = 15
 neg_inf = -math.inf
 
 def get_states():
@@ -92,6 +93,49 @@ def make_action(s, a):
         c += prob
         if x <= c:
             return action(s)
+
+def get_random_q():
+    action_space = list(actions.keys())
+    state_space = list(get_states())
+
+    # Initialise all action-values to 0
+    q = {s:{a:0 for a in action_space} for s in state_space}
+
+    return q
+
+def get_best_action(q, s):
+    best_a = -1
+    best_val = -math.inf
+
+    for a in q[s]:
+        if q[s][a] > best_val:
+            best_a = a
+            best_val = q[s][a]
+
+    return best_a
+
+def update_q(q, s, a, s_prime, r):
+    s_prime_ev = q[s_prime][get_best_action(q, s_prime)]
+    expected_future = gamma*s_prime_ev
+    q[s][a] += lr * (r + expected_future - q[s][a])
+    return q
+
+def q_step(q, s):
+    a = get_best_action(q, s)
+    s_prime, r = make_action(s, a)
+    q = update_q(q, s, a, s_prime, r)
+    return q, s_prime
+
+def q_episode(q):
+    s = get_starting_state()
+
+    while s not in terminal_states:
+        q, s = q_step(q, s)
+
+    return q
+
+def q_to_policy(q):
+    return {s:get_best_action(q, s) for s in get_states()}
 
 def get_random_policy():
     action_space = list(actions.keys())
@@ -170,17 +214,15 @@ def choose_policy(policy, values):
     return new_policy
 
 def main():
-    policy = get_random_policy()
-    values = {s:0 for s in get_states()}
-    for t in terminal_states:
-        values[t] = terminal_states[t]
+    q = get_random_q()
+
+    print(q)
 
     for episode in range(rounds):
         print(f'\nStarting episode {episode+1}, curent policy:')
-        print_policy(policy)
+        print_policy(q_to_policy(q))
 
-        values = td_lambda(policy, values)
-        policy = choose_policy(policy, values)
+        q = q_episode(q)
 
 if __name__ == '__main__':
     main()
