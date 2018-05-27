@@ -1,0 +1,4 @@
+(library
+  ((name game)
+  (libraries (base stdio))
+  ))
