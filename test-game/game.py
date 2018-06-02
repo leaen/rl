@@ -1,5 +1,12 @@
 import random
+import math
+import sys
+import time
 
+from colors import bcolors
+
+board_width = 4
+board_height = 3
 
 # Each tuple in blocked_states represents an unenterable state that
 #   the player will 'bounce back' against
@@ -10,21 +17,52 @@ blocked_states = [(0, 1),
 # Each tuple in the pdf represents the probability of a starting state
 #   and the state itself
 starting_state_pdf = [(1, (0,0))]
+starting_states = [(0,0)]
 
 # Each tuple in the terminal_states list represents a terminal state
 #   and its corresponding reward
 terminal_states = {(0, 2): 1}
 
 # Other parameters and constants
-default_r = -0.04
-gamma = 0.75
-time_horizon = 50
-rounds = 50
-neg_inf = -9999999999999999999999999
+default_r = -0.01
+win_reward = 1000
+lr = 0.3
+gamma = 1
+time_horizon = 1000
+rounds = 100000
+neg_inf = -math.inf
+time_delay = 0.05
+
+def read_board(fname):
+    b_text = [s.strip() for s in open(fname).read().strip().split('\n')][::-1]
+
+    global blocked_states, starting_state_pdf, terminal_states
+    global board_width, board_height, starting_states
+
+    board_width = len(b_text[0])
+    board_height = len(b_text)
+
+    blocked_states = []
+    terminal_states = {}
+    starting_states = []
+    starting_state_pdf = []
+    for y in range(board_height):
+        for x in range(board_width):
+            if b_text[y][x] == '#':
+                blocked_states.append((x,y))
+            elif b_text[y][x] == '$':
+                terminal_states[(x, y)] = win_reward
+            elif b_text[y][x] == 'x':
+                terminal_states[(x, y)] = -win_reward
+            elif b_text[y][x] == 's':
+                starting_states.append((x, y))
+
+    for s in starting_states:
+        starting_state_pdf.append((1/len(starting_states), s))
 
 def get_states():
-    for x in range(4):
-        for y in range(3):
+    for x in range(board_width):
+        for y in range(board_height):
             yield (x, y)
 
 def get_starting_state():
@@ -43,7 +81,7 @@ def get_reward(s):
     return default_r
 
 def move_up(s):
-    proposed_s = (s[0], min(s[1]+1, 2))
+    proposed_s = (s[0], min(s[1]+1, board_height-1))
     next_s = proposed_s if proposed_s not in blocked_states else s
     r = get_reward(next_s)
     return (next_s, r)
@@ -61,7 +99,7 @@ def move_left(s):
     return (next_s, r)
 
 def move_right(s):
-    proposed_s = (min(s[0]+1, 3), s[1])
+    proposed_s = (min(s[0]+1, board_width-1), s[1])
     next_s = proposed_s if proposed_s not in blocked_states else s
     r = get_reward(next_s)
     return (next_s, r)
@@ -91,6 +129,51 @@ def make_action(s, a):
         c += prob
         if x <= c:
             return action(s)
+
+def get_random_q():
+    action_space = list(actions.keys())
+    state_space = list(get_states())
+
+    # Initialise all action-values to 0
+    q = {s:{a:0 for a in action_space} for s in state_space}
+
+    return q
+
+def get_best_action(q, s):
+    best_a = -1
+    best_val = -math.inf
+
+    for a in q[s]:
+        if q[s][a] > best_val:
+            best_a = a
+            best_val = q[s][a]
+
+    return best_a
+
+def update_q(q, s, a, s_prime, r):
+    s_prime_ev = q[s_prime][get_best_action(q, s_prime)]
+    expected_future = gamma*s_prime_ev
+    q[s][a] += lr * (r + expected_future - q[s][a])
+    return q
+
+def q_step(q, s):
+    a = get_best_action(q, s)
+    s_prime, r = make_action(s, a)
+    q = update_q(q, s, a, s_prime, r)
+    return q, s_prime
+
+def q_episode(q):
+    s = get_starting_state()
+    steps = 0
+
+    while steps < time_horizon and s not in terminal_states:
+        q, s = q_step(q, s)
+        steps += 1
+
+    return q
+
+def q_to_policy(q):
+    return {s:get_best_action(q, s) for s in get_states()}
 
 def get_random_policy():
     action_space = list(actions.keys())
@@ -122,8 +205,8 @@ def td_lambda(policy, values, lam=0.7):
 
     return new_values
 
-def print_policy(policy):
-    table = [[policy[(x, y)] for x in range(4)] for y in range(3)]
+def print_policy(policy, cur_x = -1, cur_y = -1):
+    table = [[policy[(x, y)] for x in range(board_width)] for y in range(board_height)]
 
     # Replace blocked states with an empty cell
     for blocked_s in blocked_states:
@@ -135,9 +218,15 @@ def print_policy(policy):
     for terminal_s in terminal_states:
         x, y = terminal_s
         if terminal_states[terminal_s] > 0:
-            table[y][x] = '$'
+            table[y][x] = bcolors.OKGREEN + bcolors.UNDERLINE + '$' + bcolors.ENDC
         else:
-            table[y][x] = 'x'
+            table[y][x] = bcolors.FAIL + bcolors.UNDERLINE + 'x' + bcolors.ENDC
+
+    for x, y in starting_states:
+        table[y][x] = bcolors.OKBLUE + bcolors.BOLD + 's' + bcolors.ENDC
+
+    if cur_x >= 0 and cur_y >= 0:
+        table[cur_y][cur_x] = 'X'
 
     table = table[::-1]
 
@@ -169,17 +258,23 @@ def choose_policy(policy, values):
     return new_policy
 
 def main():
-    policy = get_random_policy()
-    values = {s:0 for s in get_states()}
-    for t in terminal_states:
-        values[t] = terminal_states[t]
+    if len(sys.argv) == 2:
+        read_board(sys.argv[1])
+
+    q = get_random_q()
+
+    last_print = 0
 
     for episode in range(rounds):
-        print(f'\nStarting episode {episode+1}, curent policy:')
-        print_policy(policy)
+        if episode % 5 == 0:
+            while time.time() - last_print < time_delay:
+                time.sleep(0.01)
+            print(f'\nStarting episode {episode+1}, current policy:')
+            print_policy(q_to_policy(q))
+            time.sleep(time_delay)
+            last_print = time.time()
 
-        values = td_lambda(policy, values)
-        policy = choose_policy(policy, values)
+        q = q_episode(q)
 
 if __name__ == '__main__':
     main()
