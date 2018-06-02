@@ -1,7 +1,6 @@
 open Base__
-open Board
 
-type action =
+type t =
   | Up
   | Down
   | Left
@@ -17,10 +16,11 @@ let action_space = [
 let bound low high value =
   max low (min high value)
 
-let move max_x max_y state a =
+let move max_x max_y s a =
+  let module S = State in
   match a with
-  | Up -> Board.make_state state.x (bound 0 max_y (state.y + 1))
-  | Down -> Board.make_state state.x (bound 0 max_y (state.y - 1))
-  | Left -> Board.make_state (bound 0 max_x (state.x - 1)) state.y
-  | Right -> Board.make_state (bound 0 max_x (state.x + 1)) state.y
+  | Up -> S.make (S.get_x s) (bound 0 max_y (S.get_y s + 1))
+  | Down -> S.make (S.get_x s) (bound 0 max_y (S.get_y s - 1))
+  | Left -> S.make (bound 0 max_x (S.get_x s - 1)) (S.get_y s)
+  | Right -> S.make (bound 0 max_x (S.get_x s + 1)) (S.get_y s)
 

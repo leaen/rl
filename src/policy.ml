@@ -1,3 +1,5 @@
 open Base__
 
-type t = (Board.cell, Action.t, Board.cell_comp) Map.t
+type t = int
+
+let get_random b = 1

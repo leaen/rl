@@ -1,0 +1,11 @@
+opam-version: "1.2"
+version: "1.0"
+maintainer: "mossbanay@gmail.com"
+authors: ["leaen"]
+homepage: "https://github.com/leaen/rl"
+bug-reports: "https://github.com/leaen/rl/lissues"
+dev-repo: "https://github.com/leaen/rl.git"
+license: "MIT"
+build: [
+  ["jbuilder" "build" "--only" "game" "--root" "." "-j" jobs "@install"]
+]
