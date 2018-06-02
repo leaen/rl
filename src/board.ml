@@ -33,7 +33,8 @@ let read_board fname =
   let add_line_to_board board line =
     board @ [line_list_to_cells (String.split_on_chars ~on:[','] line)] in
 
-  In_channel.fold_lines (In_channel.create fname) ~init:[] ~f:add_line_to_board
+  let cells = In_channel.fold_lines (In_channel.create fname) ~init:[] ~f:add_line_to_board in
+  { cells = cells }
 
 let print_board board =
   let print_row r =
@@ -59,3 +60,8 @@ let get_starting_states board =
 
 let get_possible_states board =
   get_states_with_property board ~f:(fun x -> not x.solid)
+
+let to_string b =
+  let c = b.cells in
+  let str_rows = List.map c ~f:(fun r -> String.concat ~sep:""  (List.map ~f:(fun c -> c.value) r)) in
+  String.concat ~sep:"\n" str_rows
