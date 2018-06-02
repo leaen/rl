@@ -36,11 +36,6 @@ let read_board fname =
   let cells = In_channel.fold_lines (In_channel.create fname) ~init:[] ~f:add_line_to_board in
   { cells = cells }
 
-let print_board board =
-  let print_row r =
-    printf "%s\n" (String.concat (List.map ~f:(fun x -> x.value) r)) in
-  List.iter ~f:print_row board
-
 let get_states_with_property board ~f =
   let rec aux_row x y l acc =
     match l with
@@ -53,7 +48,7 @@ let get_states_with_property board ~f =
     | [] -> acc
     | hd :: tl -> aux (y + 1) tl ((aux_row 0 y hd []) @ acc) in
 
-  aux 0 board []
+  aux 0 board.cells []
 
 let get_starting_states board =
   get_states_with_property ~f:(fun x -> x.starting) board
